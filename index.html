@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>تحويل النص إلى صوت بسيط</title>
+<title>تحويل النص إلى صوت مع دعم عربي مرتب</title>
 <style>
   body {
     font-family: Arial, sans-serif;
     padding: 20px;
-    background: #222;
+    background: #282c34;
     color: #eee;
   }
   textarea {
@@ -26,7 +26,7 @@
     border: none;
   }
   button {
-    background-color: #28a745;
+    background-color: #4caf50;
     color: white;
     cursor: pointer;
     width: 100%;
@@ -35,7 +35,7 @@
 </head>
 <body>
 
-<h2>تحويل النص إلى صوت</h2>
+<h2>تحويل النص إلى صوت مع دعم عربي مرتب</h2>
 
 <textarea id="text" placeholder="اكتب النص هنا..."></textarea>
 
@@ -51,19 +51,47 @@
 
   let voices = [];
 
+  // خريطة لترجمة رموز اللغات لأسماء عربية واضحة
+  const langMap = {
+    "ar-SA": "العربية (السعودية)",
+    "ar-EG": "العربية (مصر)",
+    "ar-AE": "العربية (الإمارات)",
+    "ar-IQ": "العربية (العراق)",
+    "ar": "العربية",
+    "en-US": "الإنجليزية (الولايات المتحدة)",
+    "en-GB": "الإنجليزية (بريطانيا)",
+    "fr-FR": "الفرنسية (فرنسا)",
+    "es-ES": "الإسبانية (إسبانيا)",
+    "de-DE": "الألمانية (ألمانيا)",
+    "it-IT": "الإيطالية (إيطاليا)",
+    "ja-JP": "اليابانية (اليابان)",
+    "ko-KR": "الكورية (كوريا)",
+    "zh-CN": "الصينية (الصين)",
+    "ru-RU": "الروسية (روسيا)"
+  };
+
+  function getLangName(code) {
+    // ارجع الاسم المعرب، أو الرمز نفسه لو مش موجود في الخريطة
+    return langMap[code] || code;
+  }
+
   function populateVoices() {
     voices = synth.getVoices();
     voiceSelect.innerHTML = '';
+
+    // ترتيب الأصوات حسب اللغة مع الترجمة
     voices.forEach((voice, i) => {
+      const langName = getLangName(voice.lang);
       const option = document.createElement('option');
       option.value = i;
-      option.textContent = `${voice.name} (${voice.lang})`;
+      option.textContent = `${voice.name} — ${langName}`;
       voiceSelect.appendChild(option);
     });
-    // اختار الصوت العربي الأول لو موجود
-    const arabicIndex = voices.findIndex(v => v.lang.startsWith('ar'));
-    if (arabicIndex >= 0) {
-      voiceSelect.selectedIndex = arabicIndex;
+
+    // اختيار أول صوت عربي تلقائي لو موجود
+    const arabicVoiceIndex = voices.findIndex(v => v.lang.startsWith('ar'));
+    if (arabicVoiceIndex >= 0) {
+      voiceSelect.selectedIndex = arabicVoiceIndex;
     }
   }
 
@@ -72,12 +100,12 @@
   speakBtn.addEventListener('click', () => {
     const text = textArea.value.trim();
     if (!text) {
-      alert('يرجى إدخال نص');
+      alert('يرجى إدخال نص.');
       return;
     }
     const utterThis = new SpeechSynthesisUtterance(text);
     const selectedVoice = voices[voiceSelect.value];
-    if(selectedVoice) {
+    if (selectedVoice) {
       utterThis.voice = selectedVoice;
       utterThis.lang = selectedVoice.lang;
     }
@@ -85,7 +113,7 @@
     synth.speak(utterThis);
   });
 
-  // تحميل الأصوات أول مرة
+  // شغل تحميل الأصوات فوراً
   populateVoices();
 </script>
 
