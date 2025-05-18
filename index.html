@@ -3,208 +3,90 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>تحويل النص إلى صوت</title>
+<title>تحويل النص إلى صوت بسيط</title>
 <style>
   body {
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    color: #fff;
+    font-family: Arial, sans-serif;
     padding: 20px;
-    min-height: 100vh;
-  }
-  h1 {
-    text-align: center;
-    margin-bottom: 15px;
+    background: #222;
+    color: #eee;
   }
   textarea {
     width: 100%;
     height: 150px;
-    padding: 10px;
     font-size: 18px;
-    border-radius: 10px;
-    border: none;
-    resize: vertical;
+    border-radius: 8px;
+    padding: 10px;
   }
   select, button {
     padding: 10px;
     font-size: 16px;
+    margin-top: 10px;
     border-radius: 8px;
     border: none;
-    margin-top: 10px;
-    cursor: pointer;
-  }
-  select {
-    width: 48%;
-    margin-right: 4%;
   }
   button {
-    width: 100%;
-    background-color: #4caf50;
+    background-color: #28a745;
     color: white;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
-  }
-  button:hover {
-    background-color: #45a049;
-  }
-  .controls {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    margin-bottom: 15px;
+    cursor: pointer;
+    width: 100%;
   }
 </style>
 </head>
 <body>
 
-<h1>تحويل النص إلى صوت</h1>
-<textarea id="text" placeholder="اكتب نصك هنا..."></textarea>
+<h2>تحويل النص إلى صوت</h2>
 
-<div class="controls">
-  <select id="language"></select>
-  <select id="voiceSelect"></select>
-</div>
+<textarea id="text" placeholder="اكتب النص هنا..."></textarea>
+
+<select id="voiceSelect"></select>
 
 <button id="speakBtn">تشغيل الصوت</button>
 
 <script>
   const synth = window.speechSynthesis;
   const textArea = document.getElementById('text');
-  const languageSelect = document.getElementById('language');
   const voiceSelect = document.getElementById('voiceSelect');
   const speakBtn = document.getElementById('speakBtn');
 
   let voices = [];
 
-  // قائمة تعريب للغات
-  const languageNames = {
-    "ar-SA": "العربية (السعودية)",
-    "ar-EG": "العربية (مصر)",
-    "en-US": "الإنجليزية (أمريكا)",
-    "en-GB": "الإنجليزية (بريطانيا)",
-    "fr-FR": "الفرنسية (فرنسا)",
-    "es-ES": "الإسبانية (إسبانيا)",
-    "de-DE": "الألمانية (ألمانيا)",
-    "it-IT": "الإيطالية (إيطاليا)",
-    "ja-JP": "اليابانية (اليابان)",
-    "ko-KR": "الكورية (كوريا)",
-    "zh-CN": "الصينية (الصين)"
-  };
-
-  function getLanguageName(code) {
-    return languageNames[code] || code;
-  }
-
-  function loadVoices() {
+  function populateVoices() {
     voices = synth.getVoices();
-    if (!voices.length) return; // إذا لم يتم تحميل الأصوات بعد
-
-    // تجميع لغات بدون تكرار
-    const languagesSet = new Set(voices.map(v => v.lang));
-    languageSelect.innerHTML = '';
-    [...languagesSet].sort().forEach(langCode => {
-      const option = document.createElement('option');
-      option.value = langCode;
-      option.textContent = getLanguageName(langCode) + ` (${langCode})`;
-      languageSelect.appendChild(option);
-    });
-
-    languageSelect.selectedIndex = 0;
-    populateVoices(languageSelect.value);
-  }
-
-  function populateVoices(lang) {
     voiceSelect.innerHTML = '';
-    const filteredVoices = voices.filter(v => v.lang === lang);
-
-    if (filteredVoices.length === 0) {
-      voiceSelect.disabled = true;
+    voices.forEach((voice, i) => {
       const option = document.createElement('option');
-      option.textContent = "لا توجد أصوات متاحة";
-      voiceSelect.appendChild(option);
-      return;
-    }
-
-    voiceSelect.disabled = false;
-
-    filteredVoices.forEach(v => {
-      const option = document.createElement('option');
-      option.value = v.name;
-      option.textContent = v.name;
+      option.value = i;
+      option.textContent = `${voice.name} (${voice.lang})`;
       voiceSelect.appendChild(option);
     });
-
-    voiceSelect.selectedIndex = 0;
-  }
-
-  languageSelect.addEventListener('change', () => {
-    populateVoices(languageSelect.value);
-  });
-
-  function splitText(text, maxLength = 150) {
-    const result = [];
-    let start = 0;
-    while (start < text.length) {
-      let end = start + maxLength;
-      if (end < text.length) {
-        const lastSpace = text.lastIndexOf(' ', end);
-        if (lastSpace > start) end = lastSpace;
-      }
-      result.push(text.substring(start, end).trim());
-      start = end;
+    // اختار الصوت العربي الأول لو موجود
+    const arabicIndex = voices.findIndex(v => v.lang.startsWith('ar'));
+    if (arabicIndex >= 0) {
+      voiceSelect.selectedIndex = arabicIndex;
     }
-    return result;
   }
 
-  function speakChunks(chunks, voice, lang, index = 0) {
-    if (index >= chunks.length) return;
-
-    const utterance = new SpeechSynthesisUtterance(chunks[index]);
-    utterance.voice = voice;
-    utterance.lang = lang;
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-
-    utterance.onend = () => {
-      speakChunks(chunks, voice, lang, index + 1);
-    };
-
-    utterance.onerror = (e) => {
-      alert("حدث خطأ أثناء تحويل النص إلى صوت: " + e.error);
-    };
-
-    synth.speak(utterance);
-  }
+  synth.onvoiceschanged = populateVoices;
 
   speakBtn.addEventListener('click', () => {
     const text = textArea.value.trim();
     if (!text) {
-      alert("يرجى إدخال نص.");
+      alert('يرجى إدخال نص');
       return;
     }
-
-    const lang = languageSelect.value;
-    const voiceName = voiceSelect.value;
-    const voice = voices.find(v => v.name === voiceName);
-    if (!voice) {
-      alert("يرجى اختيار صوت مناسب.");
-      return;
+    const utterThis = new SpeechSynthesisUtterance(text);
+    const selectedVoice = voices[voiceSelect.value];
+    if(selectedVoice) {
+      utterThis.voice = selectedVoice;
+      utterThis.lang = selectedVoice.lang;
     }
-
     synth.cancel();
-    const chunks = splitText(text, 150);
-    speakChunks(chunks, voice, lang);
+    synth.speak(utterThis);
   });
 
-  // ننتظر تحميل الأصوات بشكل كامل
-  if (speechSynthesis.onvoiceschanged !== undefined) {
-    speechSynthesis.onvoiceschanged = loadVoices;
-  }
-
-  // محاولة تحميل الأصوات إذا تم تحميلهم مسبقًا
-  loadVoices();
-
+  // تحميل الأصوات أول مرة
+  populateVoices();
 </script>
 
 </body>
