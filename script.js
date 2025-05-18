@@ -8,6 +8,7 @@ let voices = [];
 
 function populateLanguages() {
   const langs = [...new Set(voices.map(v => v.lang))];
+  languageSelect.innerHTML = "";
   langs.forEach(lang => {
     const option = document.createElement("option");
     option.value = lang;
@@ -22,7 +23,7 @@ function populateVoices(selectedLang) {
   filtered.forEach(voice => {
     const option = document.createElement("option");
     option.value = voice.name;
-    option.textContent = `${voice.name} (${voice.gender || 'صوت'})`;
+    option.textContent = voice.name;
     voiceSelect.appendChild(option);
   });
 }
@@ -31,13 +32,36 @@ function loadVoices() {
   voices = synth.getVoices();
   if (voices.length > 0) {
     populateLanguages();
-    populateVoices(languageSelect.value);
+    if(languageSelect.options.length > 0){
+      populateVoices(languageSelect.value);
+    }
   }
 }
 
 languageSelect.addEventListener("change", () => {
   populateVoices(languageSelect.value);
 });
+
+function speakChunks(chunks, voice, lang, index=0) {
+  if(index >= chunks.length) return;
+
+  const utterance = new SpeechSynthesisUtterance(chunks[index]);
+  utterance.voice = voice;
+  utterance.lang = lang;
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  utterance.onend = () => {
+    speakChunks(chunks, voice, lang, index + 1);
+  };
+
+  utterance.onerror = (e) => {
+    alert("حدث خطأ أثناء تحويل النص إلى صوت: " + e.error);
+  };
+
+  synth.speak(utterance);
+}
 
 speakBtn.addEventListener("click", () => {
   const text = textArea.value.trim();
@@ -55,20 +79,11 @@ speakBtn.addEventListener("click", () => {
     return;
   }
 
-  synth.cancel(); // إلغاء أي صوت سابق
+  synth.cancel();
 
-  // تقسيم النص الطويل إلى مقاطع صغيرة
+  // تقسيم النص إلى قطع صغيرة (200 حرف)
   const chunks = text.match(/.{1,200}/g);
-  chunks.forEach((chunk, index) => {
-    const utterance = new SpeechSynthesisUtterance(chunk);
-    utterance.voice = voice;
-    utterance.lang = selectedLang;
-    utterance.rate = 1;
-    utterance.pitch = 1;
-    utterance.volume = 1;
-    utterance.delay = index * 500; // تأخير لتفادي التقطيع
-    synth.speak(utterance);
-  });
+  speakChunks(chunks, voice, selectedLang);
 });
 
 speechSynthesis.onvoiceschanged = () => {
