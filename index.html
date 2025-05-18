@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>محوّل النص إلى صوت</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
@@ -13,13 +14,19 @@
 
     <div class="controls">
       <label>اختر اللغة:</label>
-      <select id="languageSelect"></select>
+      <select id="languageSelect">
+        <option disabled selected>جاري تحميل اللغات...</option>
+      </select>
 
       <label>اختر الصوت:</label>
-      <select id="voiceSelect"></select>
+      <select id="voiceSelect">
+        <option disabled selected>اختر لغة أولاً</option>
+      </select>
 
-      <button id="speakButton">تشغيل</button>
-      <button id="stopButton">إيقاف</button>
+      <div class="buttons">
+        <button id="speakButton">تشغيل</button>
+        <button id="stopButton">إيقاف</button>
+      </div>
     </div>
   </div>
 
