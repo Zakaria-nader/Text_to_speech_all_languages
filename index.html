@@ -9,17 +9,18 @@
   <div class="container">
     <h1>محوّل النص إلى صوت</h1>
 
-    <textarea id="text" placeholder="أدخل النص هنا..."></textarea>
+    <textarea id="text" placeholder="أدخل النص هنا..." rows="10"></textarea>
 
-    <select id="languageSelect">
-      <option value="">اختر اللغة</option>
-    </select>
+    <div class="controls">
+      <label>اختر اللغة:</label>
+      <select id="languageSelect"></select>
 
-    <select id="voiceSelect">
-      <option value="">اختر الصوت</option>
-    </select>
+      <label>اختر الصوت:</label>
+      <select id="voiceSelect"></select>
 
-    <button id="speakButton">تشغيل الصوت</button>
+      <button id="speakButton">تشغيل</button>
+      <button id="stopButton">إيقاف</button>
+    </div>
   </div>
 
   <script src="script.js"></script>
