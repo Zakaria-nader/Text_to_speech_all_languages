@@ -8,14 +8,18 @@
 <body>
   <div class="container">
     <h1>محوّل النص إلى صوت</h1>
-    
+
     <textarea id="text" placeholder="أدخل النص هنا..."></textarea>
+
+    <select id="languageSelect">
+      <option value="">اختر اللغة</option>
+    </select>
 
     <select id="voiceSelect">
       <option value="">اختر الصوت</option>
     </select>
 
-    <button onclick="speak()">استمع الآن</button>
+    <button onclick="speak()">تشغيل الصوت</button>
   </div>
 
   <script src="script.js"></script>
