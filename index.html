@@ -1,85 +1,168 @@
-const synth = window.speechSynthesis;
-const languageSelect = document.getElementById('language');
-const voiceSelect = document.getElementById('voiceSelect');
-let voices = [];
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحويل النص إلى صوت</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            direction: rtl;
+        }
 
-function loadVoices() {
-  voices = synth.getVoices();
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
+        }
 
-  // خزن اللغات مع أسماء عربية وديناميكية
-  const languagesMap = {};
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
 
-  voices.forEach(v => {
-    const langCode = v.lang;
-    // ضع الاسم العربي المناسب لكل كود لغة، وإلا اترك الكود نفسه
-    if (!languagesMap[langCode]) {
-      languagesMap[langCode] = getLanguageName(langCode);
-    }
-  });
+        textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: none;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
 
-  // امسح القائمة واملأها
-  languageSelect.innerHTML = '';
-  Object.entries(languagesMap).forEach(([code, name]) => {
-    const option = document.createElement('option');
-    option.value = code;
-    option.textContent = `${name} (${code})`;
-    languageSelect.appendChild(option);
-  });
+        select, button {
+            padding: 10px;
+            margin: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
 
-  // اختر أول لغة تلقائياً واملأ أصواتها
-  if(languageSelect.options.length > 0) {
-    languageSelect.selectedIndex = 0;
-    populateVoices(languageSelect.value);
-  }
-}
+        select {
+            background-color: #f9f9f9;
+            width: 200px;
+        }
 
-function getLanguageName(code) {
-  // قم بتعريب أشهر اللغات فقط
-  const map = {
-    "ar-SA": "العربية (السعودية)",
-    "ar-EG": "العربية (مصر)",
-    "ar": "العربية",
-    "en-US": "الإنجليزية (أمريكا)",
-    "en-GB": "الإنجليزية (بريطانيا)",
-    "fr-FR": "الفرنسية (فرنسا)",
-    "es-ES": "الإسبانية (إسبانيا)",
-    "de-DE": "الألمانية (ألمانيا)",
-    "it-IT": "الإيطالية (إيطاليا)",
-    "ja-JP": "اليابانية (اليابان)",
-    "ko-KR": "الكورية (كوريا)",
-    "zh-CN": "الصينية (الصين)"
-  };
-  return map[code] || code;
-}
+        button {
+            background-color: #28a745;
+            color: #fff;
+            transition: background-color 0.3s;
+        }
 
-function populateVoices(lang) {
-  voiceSelect.innerHTML = '';
-  const filteredVoices = voices.filter(v => v.lang === lang);
-  if(filteredVoices.length === 0) {
-    voiceSelect.disabled = true;
-    const option = document.createElement('option');
-    option.textContent = "لا توجد أصوات متاحة";
-    voiceSelect.appendChild(option);
-    return;
-  }
-  voiceSelect.disabled = false;
-  filteredVoices.forEach(v => {
-    const option = document.createElement('option');
-    option.value = v.name;
-    option.textContent = v.name;
-    voiceSelect.appendChild(option);
-  });
-  voiceSelect.selectedIndex = 0;
-}
+        button:hover {
+            background-color: #218838;
+        }
 
-languageSelect.addEventListener('change', () => {
-  populateVoices(languageSelect.value);
-});
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
 
-// عند تحميل الأصوات
-if (speechSynthesis.onvoiceschanged !== undefined) {
-  speechSynthesis.onvoiceschanged = loadVoices;
-}
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+                margin: 10px;
+            }
 
-// استدعاء أولي لتحميل الأصوات
-loadVoices();
+            h1 {
+                font-size: 20px;
+            }
+
+            textarea, select, button {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>تحويل النص إلى صوت</h1>
+        <textarea id="textInput" placeholder="أدخل النص هنا..."></textarea>
+        <div>
+            <select id="voiceSelect"></select>
+            <select id="languageSelect">
+                <option value="ar-SA">العربية</option>
+                <option value="en-US">English</option>
+            </select>
+        </div>
+        <button id="speakButton">تحدث</button>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('textInput');
+        const voiceSelect = document.getElementById('voiceSelect');
+        const languageSelect = document.getElementById('languageSelect');
+        const speakButton = document.getElementById('speakButton');
+        let voices = [];
+
+        // تحميل الأصوات المتاحة
+        function loadVoices() {
+            voices = speechSynthesis.getVoices();
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice, index) => {
+                if (voice.lang.startsWith('ar') || voice.lang.startsWith('en')) {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.text = `${voice.name} (${voice.lang})`;
+                    voiceSelect.appendChild(option);
+                }
+            });
+        }
+
+        // تحميل الأصوات عند تحميل الصفحة وعند تغيير الأصوات
+        speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
+
+        // تحديث الأصوات بناءً على اللغة المختارة
+        languageSelect.addEventListener('change', () => {
+            const selectedLang = languageSelect.value;
+            voiceSelect.innerHTML = '';
+            voices.forEach((voice, index) => {
+                if (voice.lang.startsWith(selectedLang.split('-')[0])) {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.text = `${voice.name} (${voice.lang})`;
+                    voiceSelect.appendChild(option);
+                }
+            });
+        });
+
+        // تشغيل الصوت
+        speakButton.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (!text) {
+                alert('يرجى إدخال نص لتحويله إلى صوت');
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            const selectedVoice = voices[voiceSelect.value];
+            utterance.voice = selectedVoice;
+            utterance.lang = selectedVoice.lang;
+            utterance.rate = 1; // سرعة التحدث
+            utterance.pitch = 1; // درجة الصوت
+
+            speakButton.disabled = true;
+            utterance.onend = () => {
+                speakButton.disabled = false;
+            };
+
+            speechSynthesis.speak(utterance);
+        });
+    </script>
+</body>
+</html>
