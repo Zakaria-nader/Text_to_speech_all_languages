@@ -1,69 +1,93 @@
 let allVoices = [];
 
-function populateVoiceList() {
-  allVoices = speechSynthesis.getVoices();
+function loadVoices() {
+  return new Promise((resolve) => {
+    let voices = speechSynthesis.getVoices();
+    if (voices.length !== 0) {
+      resolve(voices);
+    } else {
+      speechSynthesis.onvoiceschanged = () => {
+        voices = speechSynthesis.getVoices();
+        resolve(voices);
+      };
+    }
+  });
+}
 
+function populateLanguages(voices) {
   const languageSelect = document.getElementById('languageSelect');
-  const voiceSelect = document.getElementById('voiceSelect');
+  const uniqueLanguages = [...new Set(voices.map(voice => voice.lang))].sort();
 
-  // إزالة الخيارات الحالية
-  languageSelect.innerHTML = '<option value="">اختر اللغة</option>';
-  voiceSelect.innerHTML = '<option value="">اختر الصوت</option>';
-
-  // الحصول على اللغات الفريدة
-  const languages = [...new Set(allVoices.map(voice => voice.lang))];
-
-  // تعبئة قائمة اللغات
-  languages.forEach(lang => {
+  uniqueLanguages.forEach(lang => {
     const option = document.createElement('option');
     option.value = lang;
-    option.textContent = lang;
+    option.textContent = `${lang}`;
     languageSelect.appendChild(option);
   });
+}
 
-  // عند تغيير اللغة، تحديث قائمة الأصوات
-  languageSelect.addEventListener('change', () => {
-    const selectedLang = languageSelect.value;
-    const filteredVoices = allVoices.filter(voice => voice.lang === selectedLang);
+function populateVoices(selectedLang) {
+  const voiceSelect = document.getElementById('voiceSelect');
+  voiceSelect.innerHTML = "";
 
-    // إزالة الخيارات الحالية
-    voiceSelect.innerHTML = '<option value="">اختر الصوت</option>';
+  const filteredVoices = allVoices.filter(voice => voice.lang === selectedLang);
 
-    // تعبئة قائمة الأصوات
-    filteredVoices.forEach(voice => {
-      const option = document.createElement('option');
-      option.value = voice.name;
-      option.textContent = `${voice.name} (${voice.lang})`;
-      voiceSelect.appendChild(option);
-    });
+  filteredVoices.forEach(voice => {
+    const option = document.createElement('option');
+    option.value = voice.name;
+    option.textContent = `${voice.name} (${voice.lang})`;
+    voiceSelect.appendChild(option);
   });
 }
 
-function speak() {
-  const text = document.getElementById('text').value;
-  const voiceName = document.getElementById('voiceSelect').value;
+async function init() {
+  allVoices = await loadVoices();
+  populateLanguages(allVoices);
 
-  if (!text) {
-    alert("من فضلك أدخل نصًا.");
-    return;
-  }
+  document.getElementById('languageSelect').addEventListener('change', (e) => {
+    populateVoices(e.target.value);
+  });
 
-  const utterance = new SpeechSynthesisUtterance(text);
-  const selectedVoice = allVoices.find(voice => voice.name === voiceName);
-  if (selectedVoice) {
-    utterance.voice = selectedVoice;
-  }
+  document.getElementById('speakButton').addEventListener('click', () => {
+    const text = document.getElementById('text').value;
+    const voiceName = document.getElementById('voiceSelect').value;
 
-  speechSynthesis.speak(utterance);
+    if (!text || !voiceName) {
+      alert("يرجى إدخال النص واختيار الصوت");
+      return;
+    }
+
+    // تقسيم النص الطويل
+    const parts = splitText(text, 3000); // 3000 حرف لكل جزء
+    let index = 0;
+
+    function speakPart() {
+      if (index >= parts.length) return;
+
+      const utterance = new SpeechSynthesisUtterance(parts[index]);
+      utterance.voice = allVoices.find(v => v.name === voiceName);
+      utterance.onend = () => {
+        index++;
+        speakPart();
+      };
+      speechSynthesis.speak(utterance);
+    }
+
+    speechSynthesis.cancel(); // إيقاف أي تشغيل سابق
+    speakPart();
+  });
+
+  document.getElementById('stopButton').addEventListener('click', () => {
+    speechSynthesis.cancel();
+  });
 }
 
-// تحميل الأصوات عند توفرها
-speechSynthesis.addEventListener('voiceschanged', populateVoiceList);
-
-// التأكد من تحميل الأصوات بعد تفاعل المستخدم
-document.getElementById('speakButton').addEventListener('click', () => {
-  if (allVoices.length === 0) {
-    populateVoiceList();
+function splitText(text, limit) {
+  const parts = [];
+  for (let i = 0; i < text.length; i += limit) {
+    parts.push(text.substring(i, i + limit));
   }
-  speak();
-});
+  return parts;
+}
+
+init();
