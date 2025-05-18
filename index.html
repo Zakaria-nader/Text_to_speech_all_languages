@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>تحويل النص إلى صوت - كل اللغات</title>
+  <title>تحويل النص إلى صوت</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,17 +11,15 @@
     <h1>محوّل النص إلى صوت</h1>
 
     <label for="language">اختر اللغة:</label>
-    <select id="language">
-      <!-- تُملأ من JavaScript -->
-    </select>
+    <select id="language"></select>
+
+    <label for="voiceSelect">اختر الصوت (ذكر/أنثى):</label>
+    <select id="voiceSelect"></select>
 
     <label for="text">النص:</label>
     <textarea id="text" rows="10" placeholder="اكتب أو الصق النص هنا..."></textarea>
 
-    <button id="convertBtn">تحويل إلى صوت</button>
-    <a id="downloadLink" style="display:none;" download="output.mp3">تحميل الصوت</a>
-
-    <audio id="audioPlayer" controls style="margin-top: 20px; display: none;"></audio>
+    <button id="speakBtn">تشغيل الصوت</button>
   </div>
 
   <script src="script.js"></script>
