@@ -1,93 +1,98 @@
-let allVoices = [];
+let voices = [];
 
 function loadVoices() {
   return new Promise((resolve) => {
-    let voices = speechSynthesis.getVoices();
-    if (voices.length !== 0) {
-      resolve(voices);
-    } else {
-      speechSynthesis.onvoiceschanged = () => {
-        voices = speechSynthesis.getVoices();
+    const synth = window.speechSynthesis;
+    let id;
+
+    id = setInterval(() => {
+      voices = synth.getVoices();
+      if (voices.length !== 0) {
+        clearInterval(id);
         resolve(voices);
-      };
-    }
+      }
+    }, 100);
   });
 }
 
-function populateLanguages(voices) {
-  const languageSelect = document.getElementById('languageSelect');
-  const uniqueLanguages = [...new Set(voices.map(voice => voice.lang))].sort();
+function populateLanguages() {
+  const languageSelect = document.getElementById("languageSelect");
+  const langs = [...new Set(voices.map(v => v.lang))].sort();
 
-  uniqueLanguages.forEach(lang => {
-    const option = document.createElement('option');
-    option.value = lang;
-    option.textContent = `${lang}`;
-    languageSelect.appendChild(option);
+  languageSelect.innerHTML = '<option disabled selected>اختر لغة</option>';
+
+  langs.forEach(lang => {
+    const opt = document.createElement("option");
+    opt.value = lang;
+    opt.textContent = lang;
+    languageSelect.appendChild(opt);
   });
 }
 
-function populateVoices(selectedLang) {
-  const voiceSelect = document.getElementById('voiceSelect');
+function populateVoices(lang) {
+  const voiceSelect = document.getElementById("voiceSelect");
+  const filtered = voices.filter(v => v.lang === lang);
   voiceSelect.innerHTML = "";
 
-  const filteredVoices = allVoices.filter(voice => voice.lang === selectedLang);
+  if (filtered.length === 0) {
+    voiceSelect.innerHTML = '<option disabled>لا توجد أصوات متاحة لهذه اللغة</option>';
+    return;
+  }
 
-  filteredVoices.forEach(voice => {
-    const option = document.createElement('option');
-    option.value = voice.name;
-    option.textContent = `${voice.name} (${voice.lang})`;
-    voiceSelect.appendChild(option);
+  filtered.forEach(v => {
+    const opt = document.createElement("option");
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    voiceSelect.appendChild(opt);
   });
 }
 
-async function init() {
-  allVoices = await loadVoices();
-  populateLanguages(allVoices);
-
-  document.getElementById('languageSelect').addEventListener('change', (e) => {
-    populateVoices(e.target.value);
-  });
-
-  document.getElementById('speakButton').addEventListener('click', () => {
-    const text = document.getElementById('text').value;
-    const voiceName = document.getElementById('voiceSelect').value;
-
-    if (!text || !voiceName) {
-      alert("يرجى إدخال النص واختيار الصوت");
-      return;
-    }
-
-    // تقسيم النص الطويل
-    const parts = splitText(text, 3000); // 3000 حرف لكل جزء
-    let index = 0;
-
-    function speakPart() {
-      if (index >= parts.length) return;
-
-      const utterance = new SpeechSynthesisUtterance(parts[index]);
-      utterance.voice = allVoices.find(v => v.name === voiceName);
-      utterance.onend = () => {
-        index++;
-        speakPart();
-      };
-      speechSynthesis.speak(utterance);
-    }
-
-    speechSynthesis.cancel(); // إيقاف أي تشغيل سابق
-    speakPart();
-  });
-
-  document.getElementById('stopButton').addEventListener('click', () => {
-    speechSynthesis.cancel();
-  });
-}
-
-function splitText(text, limit) {
+function splitText(text, maxLength = 3000) {
   const parts = [];
-  for (let i = 0; i < text.length; i += limit) {
-    parts.push(text.substring(i, i + limit));
+  for (let i = 0; i < text.length; i += maxLength) {
+    parts.push(text.slice(i, i + maxLength));
   }
   return parts;
 }
 
-init();
+function speak(text, voiceName) {
+  speechSynthesis.cancel(); // أوقف أي تشغيل سابق
+
+  const chunks = splitText(text, 3000);
+  let i = 0;
+
+  function speakNext() {
+    if (i >= chunks.length) return;
+    const utterance = new SpeechSynthesisUtterance(chunks[i]);
+    const voice = voices.find(v => v.name === voiceName);
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => {
+      i++;
+      speakNext();
+    };
+    speechSynthesis.speak(utterance);
+  }
+
+  speakNext();
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  voices = await loadVoices();
+  populateLanguages();
+
+  document.getElementById("languageSelect").addEventListener("change", (e) => {
+    populateVoices(e.target.value);
+  });
+
+  document.getElementById("speakButton").addEventListener("click", () => {
+    const text = document.getElementById("text").value.trim();
+    const voiceName = document.getElementById("voiceSelect").value;
+    if (!text) return alert("يرجى إدخال نص!");
+    if (!voiceName) return alert("يرجى اختيار صوت!");
+    speak(text, voiceName);
+  });
+
+  document.getElementById("stopButton").addEventListener("click", () => {
+    speechSynthesis.cancel();
+  });
+});
