@@ -1,53 +1,76 @@
-const apiKey = "516a925086094d7bb2f263deab708cbb";
-const convertBtn = document.getElementById("convertBtn");
-const audioPlayer = document.getElementById("audioPlayer");
-const downloadLink = document.getElementById("downloadLink");
+const synth = window.speechSynthesis;
 const languageSelect = document.getElementById("language");
+const voiceSelect = document.getElementById("voiceSelect");
+const speakBtn = document.getElementById("speakBtn");
+const textArea = document.getElementById("text");
 
-const languages = {
-  "ar-sa": "العربية (السعودية)",
-  "en-us": "الإنجليزية (أمريكا)",
-  "en-gb": "الإنجليزية (بريطانيا)",
-  "fr-fr": "الفرنسية (فرنسا)",
-  "de-de": "الألمانية (ألمانيا)",
-  "it-it": "الإيطالية (إيطاليا)",
-  "es-es": "الإسبانية (إسبانيا)",
-  "ru-ru": "الروسية (روسيا)",
-  "zh-cn": "الصينية (الصين)",
-  "ja-jp": "اليابانية (اليابان)",
-  "tr-tr": "التركية (تركيا)"
-};
+let voices = [];
 
-// تعبئة قائمة اللغات
-for (const [code, name] of Object.entries(languages)) {
-  const option = document.createElement("option");
-  option.value = code;
-  option.textContent = name;
-  languageSelect.appendChild(option);
+function populateLanguages() {
+  const langs = [...new Set(voices.map(v => v.lang))];
+  langs.forEach(lang => {
+    const option = document.createElement("option");
+    option.value = lang;
+    option.textContent = lang;
+    languageSelect.appendChild(option);
+  });
 }
 
-convertBtn.addEventListener("click", () => {
-  const text = document.getElementById("text").value.trim();
-  const language = languageSelect.value;
+function populateVoices(selectedLang) {
+  voiceSelect.innerHTML = "";
+  const filtered = voices.filter(v => v.lang === selectedLang);
+  filtered.forEach(voice => {
+    const option = document.createElement("option");
+    option.value = voice.name;
+    option.textContent = `${voice.name} (${voice.gender || 'صوت'})`;
+    voiceSelect.appendChild(option);
+  });
+}
+
+function loadVoices() {
+  voices = synth.getVoices();
+  if (voices.length > 0) {
+    populateLanguages();
+    populateVoices(languageSelect.value);
+  }
+}
+
+languageSelect.addEventListener("change", () => {
+  populateVoices(languageSelect.value);
+});
+
+speakBtn.addEventListener("click", () => {
+  const text = textArea.value.trim();
+  const selectedLang = languageSelect.value;
+  const selectedVoiceName = voiceSelect.value;
 
   if (!text) {
     alert("يرجى إدخال نص.");
     return;
   }
 
-  const url = `https://api.voicerss.org/?key=${apiKey}&hl=${language}&src=${encodeURIComponent(text)}&c=MP3&f=48khz_16bit_stereo&r=0`;
+  const voice = voices.find(v => v.name === selectedVoiceName);
+  if (!voice) {
+    alert("يرجى اختيار صوت مناسب.");
+    return;
+  }
 
-  fetch(url)
-    .then(response => response.blob())
-    .then(blob => {
-      const audioURL = URL.createObjectURL(blob);
-      audioPlayer.src = audioURL;
-      audioPlayer.style.display = "block";
-      downloadLink.href = audioURL;
-      downloadLink.style.display = "inline-block";
-    })
-    .catch(err => {
-      console.error(err);
-      alert("حدث خطأ أثناء تحويل النص إلى صوت.");
-    });
+  synth.cancel(); // إلغاء أي صوت سابق
+
+  // تقسيم النص الطويل إلى مقاطع صغيرة
+  const chunks = text.match(/.{1,200}/g);
+  chunks.forEach((chunk, index) => {
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    utterance.voice = voice;
+    utterance.lang = selectedLang;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.delay = index * 500; // تأخير لتفادي التقطيع
+    synth.speak(utterance);
+  });
 });
+
+speechSynthesis.onvoiceschanged = () => {
+  loadVoices();
+};
