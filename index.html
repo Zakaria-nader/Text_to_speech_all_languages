@@ -1,27 +1,214 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>تحويل النص إلى صوت</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>تحويل النص إلى صوت</title>
+<style>
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  textarea {
+    width: 100%;
+    height: 150px;
+    padding: 10px;
+    font-size: 18px;
+    border-radius: 10px;
+    border: none;
+    resize: vertical;
+  }
+  select, button {
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: none;
+    margin-top: 10px;
+    cursor: pointer;
+  }
+  select {
+    width: 48%;
+    margin-right: 4%;
+  }
+  button {
+    width: 100%;
+    background-color: #4caf50;
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background-color: #45a049;
+  }
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+  }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h1>محوّل النص إلى صوت</h1>
 
-    <label for="language">اختر اللغة:</label>
-    <select id="language"></select>
+<h1>تحويل النص إلى صوت</h1>
+<textarea id="text" placeholder="اكتب نصك هنا..."></textarea>
 
-    <label for="voiceSelect">اختر الصوت (ذكر/أنثى):</label>
-    <select id="voiceSelect"></select>
+<div class="controls">
+  <select id="language"></select>
+  <select id="voiceSelect"></select>
+</div>
 
-    <label for="text">النص:</label>
-    <textarea id="text" rows="10" placeholder="اكتب أو الصق النص هنا..."></textarea>
+<button id="speakBtn">تشغيل الصوت</button>
 
-    <button id="speakBtn">تشغيل الصوت</button>
-  </div>
+<script>
+  const synth = window.speechSynthesis;
+  const textArea = document.getElementById('text');
+  const languageSelect = document.getElementById('language');
+  const voiceSelect = document.getElementById('voiceSelect');
+  const speakBtn = document.getElementById('speakBtn');
 
-  <script src="script.js"></script>
+  let voices = [];
+
+  // تحميل الأصوات وتعبئة اللغات
+  function loadVoices() {
+    voices = synth.getVoices();
+
+    // قائمة اللغات بأسمائها الكاملة وليس رموز فقط
+    const languagesSet = new Set(voices.map(v => v.lang));
+    languageSelect.innerHTML = '';
+    // ترتيب اللغات
+    [...languagesSet].sort().forEach(langCode => {
+      const langName = getLanguageName(langCode);
+      const option = document.createElement('option');
+      option.value = langCode;
+      option.textContent = langName + ` (${langCode})`;
+      languageSelect.appendChild(option);
+    });
+
+    // تعيين الصوت حسب اللغة الافتراضية
+    if (languageSelect.options.length > 0) {
+      languageSelect.selectedIndex = 0;
+      populateVoices(languageSelect.value);
+    }
+  }
+
+  // تعريب أسماء اللغات المهمة
+  function getLanguageName(code) {
+    const map = {
+      "ar-SA": "العربية (السعودية)",
+      "ar-EG": "العربية (مصر)",
+      "en-US": "الإنجليزية (أمريكا)",
+      "en-GB": "الإنجليزية (بريطانيا)",
+      "fr-FR": "الفرنسية (فرنسا)",
+      "es-ES": "الإسبانية (إسبانيا)",
+      "de-DE": "الألمانية (ألمانيا)",
+      "it-IT": "الإيطالية (إيطاليا)",
+      "ja-JP": "اليابانية (اليابان)",
+      "ko-KR": "الكورية (كوريا)",
+      "zh-CN": "الصينية (الصين)"
+    };
+    return map[code] || code;
+  }
+
+  // تعبئة أصوات بناء على اللغة المختارة
+  function populateVoices(lang) {
+    voiceSelect.innerHTML = '';
+    const filteredVoices = voices.filter(v => v.lang === lang);
+    if (filteredVoices.length === 0) {
+      voiceSelect.disabled = true;
+      const option = document.createElement('option');
+      option.textContent = "لا توجد أصوات متاحة";
+      voiceSelect.appendChild(option);
+      return;
+    }
+    voiceSelect.disabled = false;
+
+    filteredVoices.forEach(v => {
+      const option = document.createElement('option');
+      option.value = v.name;
+      option.textContent = `${v.name} (${v.gender || ''})`;
+      voiceSelect.appendChild(option);
+    });
+    voiceSelect.selectedIndex = 0;
+  }
+
+  languageSelect.addEventListener('change', () => {
+    populateVoices(languageSelect.value);
+  });
+
+  // تقسيم النص الطويل إلى قطع صغيرة (200 حرف)
+  function splitText(text, maxLength = 200) {
+    const result = [];
+    let start = 0;
+    while (start < text.length) {
+      let end = start + maxLength;
+      // تأكد من عدم قطع الكلمة
+      if(end < text.length){
+        const lastSpace = text.lastIndexOf(' ', end);
+        if(lastSpace > start) end = lastSpace;
+      }
+      result.push(text.substring(start, end).trim());
+      start = end;
+    }
+    return result;
+  }
+
+  // تشغيل النص مقسم إلى أجزاء
+  function speakChunks(chunks, voice, lang, index = 0) {
+    if(index >= chunks.length) return;
+
+    const utterance = new SpeechSynthesisUtterance(chunks[index]);
+    utterance.voice = voice;
+    utterance.lang = lang;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onend = () => {
+      speakChunks(chunks, voice, lang, index + 1);
+    };
+
+    utterance.onerror = (e) => {
+      alert("حدث خطأ أثناء تحويل النص إلى صوت: " + e.error);
+    };
+
+    synth.speak(utterance);
+  }
+
+  speakBtn.addEventListener('click', () => {
+    const text = textArea.value.trim();
+    if (!text) {
+      alert("يرجى إدخال نص.");
+      return;
+    }
+
+    const lang = languageSelect.value;
+    const voiceName = voiceSelect.value;
+    const voice = voices.find(v => v.name === voiceName);
+    if (!voice) {
+      alert("يرجى اختيار صوت مناسب.");
+      return;
+    }
+
+    synth.cancel();
+    const chunks = splitText(text, 200);
+    speakChunks(chunks, voice, lang);
+  });
+
+  if (speechSynthesis.onvoiceschanged !== undefined) {
+    speechSynthesis.onvoiceschanged = loadVoices;
+  }
+
+  // تحميل الأصوات عند بداية الصفحة
+  loadVoices();
+
+</script>
 </body>
 </html>
