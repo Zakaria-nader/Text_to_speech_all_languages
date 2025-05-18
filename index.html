@@ -76,51 +76,47 @@
 
   let voices = [];
 
-  // تحميل الأصوات وتعبئة اللغات
+  // قائمة تعريب للغات
+  const languageNames = {
+    "ar-SA": "العربية (السعودية)",
+    "ar-EG": "العربية (مصر)",
+    "en-US": "الإنجليزية (أمريكا)",
+    "en-GB": "الإنجليزية (بريطانيا)",
+    "fr-FR": "الفرنسية (فرنسا)",
+    "es-ES": "الإسبانية (إسبانيا)",
+    "de-DE": "الألمانية (ألمانيا)",
+    "it-IT": "الإيطالية (إيطاليا)",
+    "ja-JP": "اليابانية (اليابان)",
+    "ko-KR": "الكورية (كوريا)",
+    "zh-CN": "الصينية (الصين)"
+  };
+
+  function getLanguageName(code) {
+    return languageNames[code] || code;
+  }
+
   function loadVoices() {
     voices = synth.getVoices();
+    if (!voices.length) return; // إذا لم يتم تحميل الأصوات بعد
 
-    // قائمة اللغات بأسمائها الكاملة وليس رموز فقط
+    // تجميع لغات بدون تكرار
     const languagesSet = new Set(voices.map(v => v.lang));
     languageSelect.innerHTML = '';
-    // ترتيب اللغات
     [...languagesSet].sort().forEach(langCode => {
-      const langName = getLanguageName(langCode);
       const option = document.createElement('option');
       option.value = langCode;
-      option.textContent = langName + ` (${langCode})`;
+      option.textContent = getLanguageName(langCode) + ` (${langCode})`;
       languageSelect.appendChild(option);
     });
 
-    // تعيين الصوت حسب اللغة الافتراضية
-    if (languageSelect.options.length > 0) {
-      languageSelect.selectedIndex = 0;
-      populateVoices(languageSelect.value);
-    }
+    languageSelect.selectedIndex = 0;
+    populateVoices(languageSelect.value);
   }
 
-  // تعريب أسماء اللغات المهمة
-  function getLanguageName(code) {
-    const map = {
-      "ar-SA": "العربية (السعودية)",
-      "ar-EG": "العربية (مصر)",
-      "en-US": "الإنجليزية (أمريكا)",
-      "en-GB": "الإنجليزية (بريطانيا)",
-      "fr-FR": "الفرنسية (فرنسا)",
-      "es-ES": "الإسبانية (إسبانيا)",
-      "de-DE": "الألمانية (ألمانيا)",
-      "it-IT": "الإيطالية (إيطاليا)",
-      "ja-JP": "اليابانية (اليابان)",
-      "ko-KR": "الكورية (كوريا)",
-      "zh-CN": "الصينية (الصين)"
-    };
-    return map[code] || code;
-  }
-
-  // تعبئة أصوات بناء على اللغة المختارة
   function populateVoices(lang) {
     voiceSelect.innerHTML = '';
     const filteredVoices = voices.filter(v => v.lang === lang);
+
     if (filteredVoices.length === 0) {
       voiceSelect.disabled = true;
       const option = document.createElement('option');
@@ -128,14 +124,16 @@
       voiceSelect.appendChild(option);
       return;
     }
+
     voiceSelect.disabled = false;
 
     filteredVoices.forEach(v => {
       const option = document.createElement('option');
       option.value = v.name;
-      option.textContent = `${v.name} (${v.gender || ''})`;
+      option.textContent = v.name;
       voiceSelect.appendChild(option);
     });
+
     voiceSelect.selectedIndex = 0;
   }
 
@@ -143,16 +141,14 @@
     populateVoices(languageSelect.value);
   });
 
-  // تقسيم النص الطويل إلى قطع صغيرة (200 حرف)
-  function splitText(text, maxLength = 200) {
+  function splitText(text, maxLength = 150) {
     const result = [];
     let start = 0;
     while (start < text.length) {
       let end = start + maxLength;
-      // تأكد من عدم قطع الكلمة
-      if(end < text.length){
+      if (end < text.length) {
         const lastSpace = text.lastIndexOf(' ', end);
-        if(lastSpace > start) end = lastSpace;
+        if (lastSpace > start) end = lastSpace;
       }
       result.push(text.substring(start, end).trim());
       start = end;
@@ -160,9 +156,8 @@
     return result;
   }
 
-  // تشغيل النص مقسم إلى أجزاء
   function speakChunks(chunks, voice, lang, index = 0) {
-    if(index >= chunks.length) return;
+    if (index >= chunks.length) return;
 
     const utterance = new SpeechSynthesisUtterance(chunks[index]);
     utterance.voice = voice;
@@ -198,17 +193,19 @@
     }
 
     synth.cancel();
-    const chunks = splitText(text, 200);
+    const chunks = splitText(text, 150);
     speakChunks(chunks, voice, lang);
   });
 
+  // ننتظر تحميل الأصوات بشكل كامل
   if (speechSynthesis.onvoiceschanged !== undefined) {
     speechSynthesis.onvoiceschanged = loadVoices;
   }
 
-  // تحميل الأصوات عند بداية الصفحة
+  // محاولة تحميل الأصوات إذا تم تحميلهم مسبقًا
   loadVoices();
 
 </script>
+
 </body>
 </html>
